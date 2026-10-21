@@ -1,0 +1,2 @@
+name,id,flux/second,f/s (base rate),f/s (base cap),flux/use,f/u (base rate),f/u (base cap),cr/u,max uses,regen,charge up,active,down,cooldown,toggle,noDissipation,noHardDissipation,hardFlux,noFiring,noTurning,noStrafing,noAccel,noShield,noVent,isPhaseCloak,tags,icon
+Lateral Skitter Drive,carcinus_skitter,,,,,,,,,,0.25,2.0,0.5,4.0,,,,,,,,,,,,movement,graphics/icons/shipsystems/carcinus_skitter.png

@@ -1,0 +1,20 @@
+{
+	"hullFrequency":{
+		"tags":{},
+		"hulls":{
+			"carcinus":0.7
+		}
+	},
+	"shipsWhenImporting":{
+		"tags":[],
+		"hulls":[
+			"carcinus"
+		]
+	},
+	"knownShips":{
+		"tags":[],
+		"hulls":[
+			"carcinus"
+		]
+	}
+}
