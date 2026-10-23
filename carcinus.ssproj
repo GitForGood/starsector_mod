@@ -1,0 +1,375 @@
+{
+  "version": "1.0",
+  "type": "SHIP",
+  "hull_id": "carcinus",
+  "hull_name": "Carcinus",
+  "hull_size": "CRUISER",
+  "designation": "Skitter Cruiser",
+  "tech": "Midline",
+  "sprite_path": "graphics/ships/carcinus/carcinus.png",
+  "sprite_w": 200,
+  "sprite_h": 160,
+  "center": [
+    80,
+    100
+  ],
+  "collision_radius": 120.0,
+  "shield_center": [
+    0.0,
+    0.0
+  ],
+  "shield_radius": 122.0,
+  "bounds": [
+    [
+      42,
+      0
+    ],
+    [
+      38,
+      20
+    ],
+    [
+      62,
+      46
+    ],
+    [
+      52,
+      58
+    ],
+    [
+      16,
+      64
+    ],
+    [
+      12,
+      80
+    ],
+    [
+      -16,
+      90
+    ],
+    [
+      -42,
+      82
+    ],
+    [
+      -62,
+      48
+    ],
+    [
+      -66,
+      18
+    ],
+    [
+      -64,
+      0
+    ],
+    [
+      -66,
+      -18
+    ],
+    [
+      -62,
+      -48
+    ],
+    [
+      -42,
+      -82
+    ],
+    [
+      -16,
+      -90
+    ],
+    [
+      12,
+      -80
+    ],
+    [
+      16,
+      -64
+    ],
+    [
+      52,
+      -58
+    ],
+    [
+      62,
+      -46
+    ],
+    [
+      38,
+      -20
+    ]
+  ],
+  "weapon_slots": [
+    {
+      "angle": 0.0,
+      "arc": 10.0,
+      "id": "WS 001",
+      "locations": [
+        38.0,
+        48.0
+      ],
+      "mount": "HARDPOINT",
+      "size": "MEDIUM",
+      "type": "BALLISTIC"
+    },
+    {
+      "angle": 0.0,
+      "arc": 10.0,
+      "id": "WS 002",
+      "locations": [
+        38.0,
+        -48.0
+      ],
+      "mount": "HARDPOINT",
+      "size": "MEDIUM",
+      "type": "BALLISTIC"
+    },
+    {
+      "angle": 0.0,
+      "arc": 160.0,
+      "id": "WS 003",
+      "locations": [
+        2.0,
+        0.0
+      ],
+      "mount": "TURRET",
+      "size": "LARGE",
+      "type": "BALLISTIC"
+    },
+    {
+      "angle": 0.0,
+      "arc": 120.0,
+      "id": "WS 004",
+      "locations": [
+        24.0,
+        0.0
+      ],
+      "mount": "TURRET",
+      "size": "MEDIUM",
+      "type": "ENERGY"
+    },
+    {
+      "angle": 60.0,
+      "arc": 150.0,
+      "id": "WS 005",
+      "locations": [
+        -16.0,
+        32.0
+      ],
+      "mount": "TURRET",
+      "size": "SMALL",
+      "type": "BALLISTIC"
+    },
+    {
+      "angle": -60.0,
+      "arc": 150.0,
+      "id": "WS 006",
+      "locations": [
+        -16.0,
+        -32.0
+      ],
+      "mount": "TURRET",
+      "size": "SMALL",
+      "type": "BALLISTIC"
+    },
+    {
+      "angle": 150.0,
+      "arc": 180.0,
+      "id": "WS 007",
+      "locations": [
+        -46.0,
+        22.0
+      ],
+      "mount": "TURRET",
+      "size": "SMALL",
+      "type": "ENERGY"
+    },
+    {
+      "angle": -150.0,
+      "arc": 180.0,
+      "id": "WS 008",
+      "locations": [
+        -46.0,
+        -22.0
+      ],
+      "mount": "TURRET",
+      "size": "SMALL",
+      "type": "ENERGY"
+    },
+    {
+      "angle": 0.0,
+      "arc": 5.0,
+      "id": "WS 009",
+      "locations": [
+        33.0,
+        21.0
+      ],
+      "mount": "HARDPOINT",
+      "size": "SMALL",
+      "type": "MISSILE"
+    },
+    {
+      "angle": 0.0,
+      "arc": 5.0,
+      "id": "WS 010",
+      "locations": [
+        33.0,
+        -21.0
+      ],
+      "mount": "HARDPOINT",
+      "size": "SMALL",
+      "type": "MISSILE"
+    }
+  ],
+  "engine_slots": [
+    {
+      "angle": 180.0,
+      "contrailSize": 45.0,
+      "length": 48.0,
+      "location": [
+        -65.0,
+        10.0
+      ],
+      "style": "MIDLINE",
+      "width": 14.0
+    },
+    {
+      "angle": 180.0,
+      "contrailSize": 45.0,
+      "length": 48.0,
+      "location": [
+        -65.0,
+        -10.0
+      ],
+      "style": "MIDLINE",
+      "width": 14.0
+    },
+    {
+      "angle": 90.0,
+      "contrailSize": 25.0,
+      "length": 28.0,
+      "location": [
+        8.0,
+        80.0
+      ],
+      "style": "MIDLINE",
+      "width": 10.0
+    },
+    {
+      "angle": -90.0,
+      "contrailSize": 25.0,
+      "length": 28.0,
+      "location": [
+        8.0,
+        -80.0
+      ],
+      "style": "MIDLINE",
+      "width": 10.0
+    },
+    {
+      "angle": 90.0,
+      "contrailSize": 30.0,
+      "length": 34.0,
+      "location": [
+        -16.0,
+        89.0
+      ],
+      "style": "MIDLINE",
+      "width": 12.0
+    },
+    {
+      "angle": -90.0,
+      "contrailSize": 30.0,
+      "length": 34.0,
+      "location": [
+        -16.0,
+        -89.0
+      ],
+      "style": "MIDLINE",
+      "width": 12.0
+    },
+    {
+      "angle": 100.0,
+      "contrailSize": 25.0,
+      "length": 26.0,
+      "location": [
+        -40.0,
+        81.0
+      ],
+      "style": "MIDLINE",
+      "width": 10.0
+    },
+    {
+      "angle": -100.0,
+      "contrailSize": 25.0,
+      "length": 26.0,
+      "location": [
+        -40.0,
+        -81.0
+      ],
+      "style": "MIDLINE",
+      "width": 10.0
+    }
+  ],
+  "stats": {
+    "name": "Carcinus",
+    "id": "carcinus",
+    "designation": "Cruiser",
+    "tech/manufacturer": "Midline",
+    "system id": "carcinus_skitter",
+    "fleet pts": "15",
+    "hitpoints": "9000",
+    "armor rating": "1150",
+    "max flux": "11500",
+    "8/6/5/4%": "",
+    "flux dissipation": "650",
+    "ordnance points": "160",
+    "fighter bays": "",
+    "max speed": "45",
+    "acceleration": "50",
+    "deceleration": "65",
+    "max turn rate": "30",
+    "turn acceleration": "55",
+    "mass": "1400",
+    "shield type": "FRONT",
+    "defense id": "",
+    "shield arc": "150",
+    "shield upkeep": "0.4",
+    "shield efficiency": "0.8",
+    "phase cost": "",
+    "phase upkeep": "",
+    "min crew": "140",
+    "max crew": "250",
+    "cargo": "150",
+    "fuel": "120",
+    "fuel/ly": "3",
+    "range": "35",
+    "max burn": "8",
+    "base value": "110000",
+    "cr %/day": "3",
+    "CR to deploy": "12",
+    "peak CR sec": "480",
+    "CR loss/sec": "0.25",
+    "supplies/rec": "18",
+    "supplies/mo": "18",
+    "c/s": "",
+    "c/f": "",
+    "f/s": "",
+    "f/f": "",
+    "crew/s": "",
+    "crew/f": "",
+    "hints": "",
+    "tags": "\"rare_bp, merc, ind\"",
+    "logistics n/a reason": "",
+    "codex variant id": "carcinus_Assault",
+    "rarity": "",
+    "breakProb": "0.5",
+    "minPieces": "2",
+    "maxPieces": "3",
+    "travel drive": "",
+    "number": ""
+  },
+  "description": "Originally designed by frontier asteroid belt miners needing a broad, stable platform capable of maneuvering through dense tumbling debris fields, the Carcinus was aggressively refitted into a heavy skirmish cruiser. Featuring an extraordinarily wide, multi-segmented carapace and heavy forward pincer sponsons, its propulsion grid sacrifices conventional forward burn speed to achieve violent lateral vectoring."
+}
