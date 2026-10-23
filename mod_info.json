@@ -1,9 +1,0 @@
-{
-  "id": "carcinus_shipyards",
-  "name": "Carcinus Shipyards",
-  "author": "swegr",
-  "utility": "false",
-  "version": "0.1.0",
-  "description": "Adds specialized ships focused on agile transverse vectoring and crab-style lateral skirmishing, starting with the Carcinus-class Heavy Skitter Cruiser.",
-  "gameVersion": "0.98a"
-}

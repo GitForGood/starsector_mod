@@ -4,6 +4,7 @@ Supports drag-and-drop slots, handles, polygons, and symmetry mirroring.
 """
 
 import math
+import os
 import tkinter as tk
 from PIL import Image, ImageTk
 from .constants import WEAPON_COLORS

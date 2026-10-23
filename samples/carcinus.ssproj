@@ -6,7 +6,7 @@
   "hull_size": "CRUISER",
   "designation": "Skitter Cruiser",
   "tech": "Midline",
-  "sprite_path": "graphics/ships/carcinus/carcinus.png",
+  "sprite_path": "samples/carcinus/carcinus.png",
   "sprite_w": 200,
   "sprite_h": 160,
   "center": [

@@ -41,8 +41,6 @@ class ShipForgeApp(tk.Tk):
         self.update_status()
 
     def setup_ui(self):
-        self.setup_menus()
-
         # Top Toolbar
         toolbar = tk.Frame(self, bg="#161b22", height=42, padx=10, pady=4)
         toolbar.pack(side="top", fill="x")
@@ -132,6 +130,9 @@ class ShipForgeApp(tk.Tk):
                                    anchor="w", padx=10, font=("Segoe UI", 8), height=1)
         self.status_bar.pack(side="bottom", fill="x")
 
+        # Setup Menus after all UI elements are created
+        self.setup_menus()
+
     def setup_menus(self):
         menubar = tk.Menu(self, bg="#161b22", fg="#ffffff", activebackground="#2563eb", relief="flat")
 
@@ -152,14 +153,14 @@ class ShipForgeApp(tk.Tk):
 
         # Edit Menu
         edit_menu = tk.Menu(menubar, tearoff=0, bg="#161b22", fg="#ffffff", activebackground="#2563eb")
-        edit_menu.add_command(label="Delete Selected", accelerator="Del", command=self.canvas_editor.delete_selected)
+        edit_menu.add_command(label="Delete Selected", accelerator="Del", command=lambda: self.canvas_editor.delete_selected())
         edit_menu.add_command(label="Toggle Symmetry", accelerator="S", command=self.toggle_symmetry)
         edit_menu.add_command(label="Auto-generate Collision Bounds", command=self.do_auto_bounds)
         menubar.add_cascade(label="Edit", menu=edit_menu)
 
         # View Menu
         view_menu = tk.Menu(menubar, tearoff=0, bg="#161b22", fg="#ffffff", activebackground="#2563eb")
-        view_menu.add_command(label="Reset View", accelerator="R", command=self.canvas_editor.reset_view)
+        view_menu.add_command(label="Reset View", accelerator="R", command=lambda: self.canvas_editor.reset_view())
         menubar.add_cascade(label="View", menu=view_menu)
 
         # Presets Menu
