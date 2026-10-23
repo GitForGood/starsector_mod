@@ -22,15 +22,18 @@ class ShipForgeApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Starsector Ship & Weapon Forge")
-        self.geometry("1240x820")
-        self.minsize(950, 650)
-        self.configure(bg="#0d1117")
+        self.geometry("1260x840")
+        self.minsize(980, 680)
+        self.configure(bg="#11161d")
 
         # Current active project
         self.current_project_path = None
         self.ship_project = ShipProject("new_ship", "New Ship", "CRUISER")
         self.weapon_project = WeaponProject("new_weapon", "New Weapon", "MEDIUM", "BALLISTIC")
         self.current_mode = "SHIP"  # "SHIP" or "WEAPON"
+
+        # Apply comprehensive high-contrast theme
+        self.apply_global_theme()
 
         self.setup_ui()
         self.bind_shortcuts()
@@ -40,22 +43,68 @@ class ShipForgeApp(tk.Tk):
         self.inspector.update_ship_stats_display(self.ship_project)
         self.update_status()
 
+    def apply_global_theme(self):
+        self.style = ttk.Style(self)
+        self.style.theme_use("clam")
+
+        # Global Notebook
+        self.style.configure("Inspect.TNotebook", background="#1a2028", borderwidth=0)
+        self.style.configure("Inspect.TNotebook.Tab",
+                             background="#242c37",
+                             foreground="#cbd5e1",
+                             padding=[14, 7],
+                             borderwidth=1,
+                             bordercolor="#374151",
+                             font=("Segoe UI", 9, "bold"))
+        self.style.map("Inspect.TNotebook.Tab",
+                       background=[("selected", "#2d3748")],
+                       foreground=[("selected", "#38bdf8")],
+                       bordercolor=[("selected", "#38bdf8")])
+
+        # Global Combobox
+        self.style.configure("TCombobox",
+                             fieldbackground="#11161d",
+                             background="#2d3748",
+                             foreground="#ffffff",
+                             arrowcolor="#38bdf8",
+                             bordercolor="#475569",
+                             padding=3,
+                             font=("Segoe UI", 9, "bold"))
+        self.style.map("TCombobox",
+                       fieldbackground=[("readonly", "#11161d")],
+                       foreground=[("readonly", "#ffffff")],
+                       selectbackground=[("readonly", "#2563eb")])
+
+        # Global Scrollbar
+        self.style.configure("TScrollbar",
+                             background="#2d3748",
+                             troughcolor="#161b22",
+                             bordercolor="#374151",
+                             arrowcolor="#cbd5e1",
+                             relief="flat")
+        self.style.map("TScrollbar",
+                       background=[("active", "#4b5563")])
+
+        # Global Separator
+        self.style.configure("TSeparator", background="#374151")
+
     def setup_ui(self):
         # Top Toolbar
-        toolbar = tk.Frame(self, bg="#161b22", height=42, padx=10, pady=4)
+        toolbar = tk.Frame(self, bg="#1e242c", padx=10, pady=6,
+                           highlightbackground="#374151", highlightthickness=1)
         toolbar.pack(side="top", fill="x")
 
         # Mode Selector
-        tk.Label(toolbar, text="Mode:", fg="#8b949e", bg="#161b22", font=("Segoe UI", 9)).pack(side="left", padx=(0, 4))
+        tk.Label(toolbar, text="Mode:", fg="#f8fafc", bg="#1e242c", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 4))
         self.mode_var = tk.StringVar(value="SHIP")
         rb_ship = tk.Radiobutton(toolbar, text="Ship Hull", variable=self.mode_var, value="SHIP",
-                                 command=self.on_mode_change, bg="#161b22", fg="#38bdf8", selectcolor="#0d1117",
-                                 activebackground="#161b22", activeforeground="#38bdf8", font=("Segoe UI", 9, "bold"))
+                                 command=self.on_mode_change, bg="#1e242c", fg="#38bdf8", selectcolor="#0f172a",
+                                 activebackground="#1e242c", activeforeground="#38bdf8", font=("Segoe UI", 9, "bold"))
         rb_ship.pack(side="left", padx=4)
 
         rb_wpn = tk.Radiobutton(toolbar, text="Weapon", variable=self.mode_var, value="WEAPON",
-                                command=self.on_mode_change, bg="#161b22", fg="#f59e0b", selectcolor="#0d1117",
-                                activebackground="#161b22", activeforeground="#f59e0b", font=("Segoe UI", 9, "bold"))
+                                command=self.on_mode_change, bg="#1e242c", fg="#f59e0b", selectcolor="#0f172a",
+                                activebackground="#1e242c", activeforeground="#f59e0b", font=("Segoe UI", 9, "bold"))
         rb_wpn.pack(side="left", padx=4)
 
         # Separator
@@ -63,56 +112,96 @@ class ShipForgeApp(tk.Tk):
 
         # Load Sprite Button
         btn_sprite = tk.Button(toolbar, text="Load Sprite...", command=self.load_sprite_dialog,
-                               bg="#21262d", fg="#c9d1d9", relief="flat", font=("Segoe UI", 9))
+                               bg="#334155", fg="#f8fafc", activebackground="#475569", activeforeground="#ffffff",
+                               relief="flat", highlightbackground="#475569", highlightthickness=1,
+                               font=("Segoe UI", 9, "bold"), padx=10, pady=2, cursor="hand2")
         btn_sprite.pack(side="left", padx=4)
 
         # Add Mount Tools (for Ship Mode)
-        self.ship_tools_frame = tk.Frame(toolbar, bg="#161b22")
+        self.ship_tools_frame = tk.Frame(toolbar, bg="#1e242c")
         self.ship_tools_frame.pack(side="left")
 
-        btn_add_mount = tk.Button(self.ship_tools_frame, text="+ Add Mount", command=self.activate_add_mount,
-                                  bg="#21262d", fg="#38bdf8", relief="flat", font=("Segoe UI", 9, "bold"))
-        btn_add_mount.pack(side="left", padx=4)
+        # Separator before mount tools
+        ttk.Separator(self.ship_tools_frame, orient="vertical").pack(side="left", fill="y", padx=6, pady=2)
 
-        self.cb_size = ttk.Combobox(self.ship_tools_frame, values=MOUNT_SIZES, width=7, state="readonly")
+        # Bordered Weapon Mounts Group
+        self.mount_group = tk.Frame(self.ship_tools_frame, bg="#18202c",
+                                    highlightbackground="#0284c7", highlightcolor="#38bdf8",
+                                    highlightthickness=1, padx=6, pady=2)
+        self.mount_group.pack(side="left", padx=4)
+
+        tk.Label(self.mount_group, text="Weapon Mounts:", fg="#38bdf8", bg="#18202c",
+                 font=("Segoe UI", 8, "bold")).pack(side="left", padx=(2, 6))
+
+        btn_add_mount = tk.Button(self.mount_group, text="+ Add Mount", command=self.activate_add_mount,
+                                  bg="#0284c7", fg="#ffffff", activebackground="#0369a1", activeforeground="#ffffff",
+                                  relief="flat", font=("Segoe UI", 9, "bold"), padx=8, pady=2, cursor="hand2")
+        btn_add_mount.pack(side="left", padx=3)
+
+        self.cb_size = ttk.Combobox(self.mount_group, values=MOUNT_SIZES, width=8, state="readonly")
         self.cb_size.set("SMALL")
         self.cb_size.pack(side="left", padx=2)
 
-        self.cb_type = ttk.Combobox(self.ship_tools_frame, values=WEAPON_TYPES[:4], width=8, state="readonly")
+        self.cb_type = ttk.Combobox(self.mount_group, values=WEAPON_TYPES, width=10, state="readonly")
         self.cb_type.set("BALLISTIC")
         self.cb_type.pack(side="left", padx=2)
 
-        btn_add_eng = tk.Button(self.ship_tools_frame, text="+ Add Engine", command=self.activate_add_engine,
-                                bg="#21262d", fg="#f97316", relief="flat", font=("Segoe UI", 9, "bold"))
-        btn_add_eng.pack(side="left", padx=4)
+        # Toggleable Hardpoint Checkbox
+        self.hardpoint_var = tk.BooleanVar(value=False)
+        self.chk_hardpoint = tk.Checkbutton(self.mount_group, text="Hardpoint", variable=self.hardpoint_var,
+                                            command=self.on_toolbar_hardpoint_toggle,
+                                            bg="#18202c", fg="#f8fafc", selectcolor="#0f172a",
+                                            activebackground="#18202c", activeforeground="#ffffff",
+                                            font=("Segoe UI", 9, "bold"), cursor="hand2")
+        self.chk_hardpoint.pack(side="left", padx=(4, 2))
 
-        btn_auto_bounds = tk.Button(self.ship_tools_frame, text="Auto Bounds", command=self.do_auto_bounds,
-                                    bg="#21262d", fg="#10b981", relief="flat", font=("Segoe UI", 9))
-        btn_auto_bounds.pack(side="left", padx=4)
+        # Separator between Mounts and Engine/Bounds
+        ttk.Separator(self.ship_tools_frame, orient="vertical").pack(side="left", fill="y", padx=6, pady=2)
+
+        # Engine & Hull Tools Frame
+        eng_bounds_frame = tk.Frame(self.ship_tools_frame, bg="#1e242c")
+        eng_bounds_frame.pack(side="left", padx=2)
+
+        btn_add_eng = tk.Button(eng_bounds_frame, text="+ Add Engine", command=self.activate_add_engine,
+                                bg="#d97706", fg="#ffffff", activebackground="#b45309", activeforeground="#ffffff",
+                                relief="flat", font=("Segoe UI", 9, "bold"), padx=8, pady=2, cursor="hand2")
+        btn_add_eng.pack(side="left", padx=3)
+
+        btn_auto_bounds = tk.Button(eng_bounds_frame, text="Auto Bounds", command=self.do_auto_bounds,
+                                    bg="#16a34a", fg="#ffffff", activebackground="#15803d", activeforeground="#ffffff",
+                                    relief="flat", font=("Segoe UI", 9, "bold"), padx=8, pady=2, cursor="hand2")
+        btn_auto_bounds.pack(side="left", padx=3)
+
+        # Separator before Symmetry
+        ttk.Separator(toolbar, orient="vertical").pack(side="left", fill="y", padx=8, pady=2)
 
         # Symmetry Checkbox
         self.sym_var = tk.BooleanVar(value=True)
         cb_sym = tk.Checkbutton(toolbar, text="Symmetry (Mirror Y)", variable=self.sym_var,
-                                command=self.on_symmetry_toggle, bg="#161b22", fg="#e2e8f0", selectcolor="#0d1117",
-                                activebackground="#161b22", activeforeground="#ffffff", font=("Segoe UI", 9))
+                                command=self.on_symmetry_toggle, bg="#1e242c", fg="#f8fafc", selectcolor="#0f172a",
+                                activebackground="#1e242c", activeforeground="#ffffff", font=("Segoe UI", 9, "bold"))
         cb_sym.pack(side="left", padx=10)
 
         # Right side actions: Dimensions Guide & Export
         btn_export = tk.Button(toolbar, text="Export to Mod...", command=self.open_export_dialog,
-                               bg="#2563eb", fg="#ffffff", activebackground="#1d4ed8", font=("Segoe UI", 9, "bold"),
-                               padx=12, relief="flat", cursor="hand2")
+                               bg="#2563eb", fg="#ffffff", activebackground="#1d4ed8", activeforeground="#ffffff",
+                               font=("Segoe UI", 9, "bold"), padx=14, pady=3, relief="flat", cursor="hand2")
         btn_export.pack(side="right", padx=4)
 
-        btn_guide = tk.Button(toolbar, text="Dimensions Guide", command=self.open_reference_guide,
-                              bg="#374151", fg="#38bdf8", font=("Segoe UI", 9), relief="flat")
+        btn_guide = tk.Button(toolbar, text="Dimensions Guide (F1)", command=self.open_reference_guide,
+                              bg="#334155", fg="#38bdf8", activebackground="#475569", activeforeground="#38bdf8",
+                              font=("Segoe UI", 9, "bold"), padx=10, pady=2, relief="flat",
+                              highlightbackground="#475569", highlightthickness=1, cursor="hand2")
         btn_guide.pack(side="right", padx=6)
 
         btn_presets = tk.Button(toolbar, text="Presets...", command=self.open_preset_manager,
-                                bg="#21262d", fg="#c9d1d9", font=("Segoe UI", 9), relief="flat")
+                                bg="#2d3748", fg="#f8fafc", activebackground="#374151", activeforeground="#ffffff",
+                                font=("Segoe UI", 9, "bold"), padx=10, pady=2, relief="flat",
+                                highlightbackground="#4b5563", highlightthickness=1, cursor="hand2")
         btn_presets.pack(side="right", padx=4)
 
         # Main Workspace Container
-        main_container = tk.Frame(self, bg="#0d1117")
+        main_container = tk.Frame(self, bg="#11161d")
         main_container.pack(fill="both", expand=True)
 
         # Right Panel: Inspector
@@ -126,18 +215,19 @@ class ShipForgeApp(tk.Tk):
         self.canvas_editor.pack(side="left", fill="both", expand=True)
 
         # Bottom Status Bar
-        self.status_bar = tk.Label(self, text="Ready", bg="#0f141c", fg="#8b949e",
-                                   anchor="w", padx=10, font=("Segoe UI", 8), height=1)
+        self.status_bar = tk.Label(self, text="Ready", bg="#1e242c", fg="#f8fafc",
+                                   anchor="w", padx=12, font=("Segoe UI", 9), height=1,
+                                   highlightbackground="#374151", highlightthickness=1)
         self.status_bar.pack(side="bottom", fill="x")
 
         # Setup Menus after all UI elements are created
         self.setup_menus()
 
     def setup_menus(self):
-        menubar = tk.Menu(self, bg="#161b22", fg="#ffffff", activebackground="#2563eb", relief="flat")
+        menubar = tk.Menu(self, bg="#1e242c", fg="#ffffff", activebackground="#2563eb", relief="flat")
 
         # File Menu
-        file_menu = tk.Menu(menubar, tearoff=0, bg="#161b22", fg="#ffffff", activebackground="#2563eb")
+        file_menu = tk.Menu(menubar, tearoff=0, bg="#1e242c", fg="#ffffff", activebackground="#2563eb")
         file_menu.add_command(label="New Ship Project", accelerator="Ctrl+N", command=self.new_ship_project)
         file_menu.add_command(label="New Weapon Project", accelerator="Ctrl+Shift+N", command=self.new_weapon_project)
         file_menu.add_separator()
@@ -152,24 +242,24 @@ class ShipForgeApp(tk.Tk):
         menubar.add_cascade(label="File", menu=file_menu)
 
         # Edit Menu
-        edit_menu = tk.Menu(menubar, tearoff=0, bg="#161b22", fg="#ffffff", activebackground="#2563eb")
+        edit_menu = tk.Menu(menubar, tearoff=0, bg="#1e242c", fg="#ffffff", activebackground="#2563eb")
         edit_menu.add_command(label="Delete Selected", accelerator="Del", command=lambda: self.canvas_editor.delete_selected())
         edit_menu.add_command(label="Toggle Symmetry", accelerator="S", command=self.toggle_symmetry)
         edit_menu.add_command(label="Auto-generate Collision Bounds", command=self.do_auto_bounds)
         menubar.add_cascade(label="Edit", menu=edit_menu)
 
         # View Menu
-        view_menu = tk.Menu(menubar, tearoff=0, bg="#161b22", fg="#ffffff", activebackground="#2563eb")
+        view_menu = tk.Menu(menubar, tearoff=0, bg="#1e242c", fg="#ffffff", activebackground="#2563eb")
         view_menu.add_command(label="Reset View", accelerator="R", command=lambda: self.canvas_editor.reset_view())
         menubar.add_cascade(label="View", menu=view_menu)
 
         # Presets Menu
-        presets_menu = tk.Menu(menubar, tearoff=0, bg="#161b22", fg="#ffffff", activebackground="#2563eb")
+        presets_menu = tk.Menu(menubar, tearoff=0, bg="#1e242c", fg="#ffffff", activebackground="#2563eb")
         presets_menu.add_command(label="Manage & Apply Presets...", command=self.open_preset_manager)
         menubar.add_cascade(label="Presets", menu=presets_menu)
 
         # Help Menu
-        help_menu = tk.Menu(menubar, tearoff=0, bg="#161b22", fg="#ffffff", activebackground="#2563eb")
+        help_menu = tk.Menu(menubar, tearoff=0, bg="#1e242c", fg="#ffffff", activebackground="#2563eb")
         help_menu.add_command(label="Dimensions & Mount Reference Guide", accelerator="F1", command=self.open_reference_guide)
         help_menu.add_separator()
         help_menu.add_command(label="About", command=self.show_about)
@@ -204,8 +294,18 @@ class ShipForgeApp(tk.Tk):
         if t in ("WEAPON", "ENGINE"):
             obj.x += dx
             obj.y += dy
-            self.canvas_editor.redraw()
-            self.inspector.set_selection(item)
+        elif t == "BOUND":
+            if self.ship_project and obj < len(self.ship_project.bounds):
+                pt = self.ship_project.bounds[obj]
+                self.ship_project.bounds[obj] = (pt[0] + dx, pt[1] + dy)
+        elif t == "OFFSET":
+            offsets = self.weapon_project.turret_offsets if self.canvas_editor.active_weapon_sprite == "TURRET" else self.weapon_project.hardpoint_offsets
+            if obj < len(offsets):
+                offsets[obj] = [offsets[obj][0] + dx, offsets[obj][1] + dy]
+
+        self.canvas_editor.redraw()
+        self.inspector.sync_selection_values()
+        self.update_status()
 
     def on_mode_change(self):
         self.current_mode = self.mode_var.get()
@@ -249,11 +349,23 @@ class ShipForgeApp(tk.Tk):
         self.canvas_editor.tool_mode = "ADD_WEAPON"
         self.canvas_editor.new_slot_size = self.cb_size.get()
         self.canvas_editor.new_slot_type = self.cb_type.get()
-        self.status_bar.config(text="Click on the canvas to place a new weapon mount...")
+        self.canvas_editor.new_slot_mount = "HARDPOINT" if self.hardpoint_var.get() else "TURRET"
+        mount_str = self.canvas_editor.new_slot_mount
+        size_str = self.canvas_editor.new_slot_size
+        type_str = self.canvas_editor.new_slot_type
+        self.status_bar.config(text=f"Mode: ADD MOUNT [{size_str} {type_str} {mount_str}]  •  Click on the canvas to place...")
+
+    def on_toolbar_hardpoint_toggle(self):
+        self.canvas_editor.new_slot_mount = "HARDPOINT" if self.hardpoint_var.get() else "TURRET"
+        if self.canvas_editor.tool_mode == "ADD_WEAPON":
+            mount_str = self.canvas_editor.new_slot_mount
+            size_str = self.cb_size.get()
+            type_str = self.cb_type.get()
+            self.status_bar.config(text=f"Mode: ADD MOUNT [{size_str} {type_str} {mount_str}]  •  Click on the canvas to place...")
 
     def activate_add_engine(self):
         self.canvas_editor.tool_mode = "ADD_ENGINE"
-        self.status_bar.config(text="Click on the canvas to place a new engine nozzle...")
+        self.status_bar.config(text="Mode: ADD ENGINE  •  Click on the canvas to place a new engine nozzle...")
 
     def do_auto_bounds(self):
         if self.ship_project and self.canvas_editor.raw_image:
@@ -274,6 +386,7 @@ class ShipForgeApp(tk.Tk):
         self.update_status()
 
     def on_canvas_change(self):
+        self.inspector.sync_selection_values()
         self.update_status()
 
     def on_inspector_change(self):
@@ -322,13 +435,13 @@ class ShipForgeApp(tk.Tk):
                 self.ship_project = ShipProject.from_project_dict(data)
                 self.mode_var.set("SHIP")
                 self.on_mode_change()
-                if self.ship_project.sprite_path:
+                if self.ship_project.sprite_path and os.path.isfile(self.ship_project.sprite_path):
                     self.canvas_editor.load_image(self.ship_project.sprite_path)
             else:
                 self.weapon_project = WeaponProject.from_project_dict(data)
                 self.mode_var.set("WEAPON")
                 self.on_mode_change()
-                if self.weapon_project.turret_sprite_path:
+                if self.weapon_project.turret_sprite_path and os.path.isfile(self.weapon_project.turret_sprite_path):
                     self.canvas_editor.load_image(self.weapon_project.turret_sprite_path)
 
             self.current_project_path = path
@@ -369,13 +482,13 @@ class ShipForgeApp(tk.Tk):
     def update_status(self):
         if self.current_mode == "SHIP":
             sp = self.ship_project
-            info = f"Ship: {sp.hull_name} ({sp.hull_id}) | Size: {sp.hull_size} | "
-            info += f"Weapons: {len(sp.weapon_slots)} | Engines: {len(sp.engine_slots)} | Bounds: {len(sp.bounds)} pts | "
-            info += f"Zoom: {self.canvas_editor.zoom:.1f}x | Symmetry: {'ON' if self.canvas_editor.symmetry_enabled else 'OFF'}"
+            info = f"  Ship: {sp.hull_name} ({sp.hull_id})   •   Class: {sp.hull_size}   •   "
+            info += f"Weapons: {len(sp.weapon_slots)}   •   Engines: {len(sp.engine_slots)}   •   Bounds: {len(sp.bounds)} pts   •   "
+            info += f"Zoom: {self.canvas_editor.zoom:.1f}x   •   Symmetry: {'ON' if self.canvas_editor.symmetry_enabled else 'OFF'}"
         else:
             wp = self.weapon_project
-            info = f"Weapon: {wp.weapon_name} ({wp.weapon_id}) | Size: {wp.size} | Type: {wp.type} | "
-            info += f"Barrels: {len(wp.turret_offsets)} | Zoom: {self.canvas_editor.zoom:.1f}x"
+            info = f"  Weapon: {wp.weapon_name} ({wp.weapon_id})   •   Size: {wp.size}   •   Type: {wp.type}   •   "
+            info += f"Barrels: {len(wp.turret_offsets)}   •   Zoom: {self.canvas_editor.zoom:.1f}x"
         self.status_bar.config(text=info)
 
     def show_about(self):

@@ -12,18 +12,19 @@ from .models import canvas_to_starsector, starsector_to_canvas, WeaponSlot, Engi
 
 class CanvasEditor(tk.Frame):
     def __init__(self, parent, on_select_callback=None, on_change_callback=None):
-        super().__init__(parent, bg="#0d1117")
+        super().__init__(parent, bg="#11161d")
 
         self.on_select_callback = on_select_callback
         self.on_change_callback = on_change_callback
 
-        self.canvas = tk.Canvas(self, bg="#0f141c", highlightthickness=0, cursor="crosshair")
+        self.canvas = tk.Canvas(self, bg="#11161d", highlightthickness=0, cursor="crosshair")
         self.canvas.pack(fill="both", expand=True)
 
         # Viewport transform
         self.zoom = 2.5
-        self.pan_x = 350.0
-        self.pan_y = 300.0
+        self.pan_x = 400.0
+        self.pan_y = 350.0
+        self.has_initial_centered = False
 
         # Project reference
         self.mode = "SHIP"  # "SHIP" or "WEAPON"
@@ -34,15 +35,14 @@ class CanvasEditor(tk.Frame):
         # Cached PIL Images
         self.raw_image = None
         self.tk_image = None
-        self.bg_pattern = None
 
         # Interactive selection state
-        self.selected_item = None  # ("WEAPON", slot) or ("ENGINE", slot) or ("BOUND", index) or ("SHIELD", None) or ("OFFSET", index)
+        self.selected_item = None
         self.drag_data = {"x": 0, "y": 0, "orig_x": 0, "orig_y": 0}
         self.is_panning = False
         self.symmetry_enabled = True
 
-        # Tool mode: "SELECT", "ADD_WEAPON", "ADD_ENGINE", "ADD_BOUND"
+        # Tool mode: "SELECT", "ADD_WEAPON", "ADD_ENGINE"
         self.tool_mode = "SELECT"
         self.new_slot_type = "BALLISTIC"
         self.new_slot_size = "SMALL"
@@ -62,10 +62,16 @@ class CanvasEditor(tk.Frame):
         self.canvas.bind("<ButtonRelease-3>", self.end_pan)
 
         self.canvas.bind("<MouseWheel>", self.on_mouse_wheel)
-        self.canvas.bind("<Configure>", lambda e: self.redraw())
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
 
-        # Hit detection tags
         self.item_hitboxes = {}
+
+    def on_canvas_configure(self, event):
+        if not self.has_initial_centered and event.width > 100:
+            self.pan_x = event.width / 2.0
+            self.pan_y = event.height / 2.0
+            self.has_initial_centered = True
+        self.redraw()
 
     def set_ship_project(self, project):
         self.mode = "SHIP"
@@ -105,7 +111,7 @@ class CanvasEditor(tk.Frame):
         self.redraw()
 
     def reset_view(self):
-        w = self.canvas.winfo_width() or 700
+        w = self.canvas.winfo_width() or 800
         h = self.canvas.winfo_height() or 600
         self.pan_x = w / 2.0
         self.pan_y = h / 2.0
@@ -113,11 +119,8 @@ class CanvasEditor(tk.Frame):
         self.redraw()
 
     def on_mouse_wheel(self, event):
-        # Zoom around cursor
         factor = 1.15 if event.delta > 0 else 0.85
-        new_zoom = max(0.5, min(16.0, self.zoom * factor))
-        
-        # Cursor position relative to pan center
+        new_zoom = max(0.4, min(16.0, self.zoom * factor))
         mx = event.x
         my = event.y
         self.pan_x = mx - (mx - self.pan_x) * (new_zoom / self.zoom)
@@ -171,7 +174,6 @@ class CanvasEditor(tk.Frame):
                                           self.ship_project.center[0], self.ship_project.center[1])
             return self.img_to_screen(ix, iy)
         elif self.mode == "WEAPON" and self.raw_image:
-            # For weapons, center is at (width/2, height/2), forward is +X (up), right is +Y (right)
             cx = self.raw_image.width / 2.0
             cy = self.raw_image.height / 2.0
             ix = cx + ss_y
@@ -192,34 +194,102 @@ class CanvasEditor(tk.Frame):
             return ss_x, ss_y
         return 0, 0
 
+    def draw_background_grid(self):
+        w = self.canvas.winfo_width() or 800
+        h = self.canvas.winfo_height() or 600
+
+        # Subtle CAD grid lines every 40px
+        step = 40.0
+        start_x = self.pan_x % step
+        start_y = self.pan_y % step
+
+        x = start_x
+        while x < w:
+            self.canvas.create_line(x, 0, x, h, fill="#18202a", width=1)
+            x += step
+
+        y = start_y
+        while y < h:
+            self.canvas.create_line(0, y, w, y, fill="#18202a", width=1)
+            y += step
+
+        # Origin reference axes (Subtle cross)
+        self.canvas.create_line(self.pan_x, 0, self.pan_x, h, fill="#283547", width=1, dash=(4, 4))
+        self.canvas.create_line(0, self.pan_y, w, self.pan_y, fill="#283547", width=1, dash=(4, 4))
+
     def redraw(self):
         self.canvas.delete("all")
         self.item_hitboxes.clear()
 
-        # 1. Draw Checkered Background & Sprite Image
+        # 1. Background Blueprint Grid
+        self.draw_background_grid()
+
+        # 2. Draw Checkered Background & Sprite Image
         if self.raw_image:
             iw = int(self.raw_image.width * self.zoom)
             ih = int(self.raw_image.height * self.zoom)
             if iw > 0 and ih > 0:
                 top_left_x = self.pan_x - iw / 2.0
                 top_left_y = self.pan_y - ih / 2.0
-                
-                # Checkered background behind sprite
+
+                # Checkered transparency grid
+                tile_size = 16
+                rows = int(ih // tile_size) + 1
+                cols = int(iw // tile_size) + 1
+                for r in range(rows):
+                    for c in range(cols):
+                        bx1 = top_left_x + c * tile_size
+                        by1 = top_left_y + r * tile_size
+                        bx2 = min(bx1 + tile_size, top_left_x + iw)
+                        by2 = min(by1 + tile_size, top_left_y + ih)
+                        tile_color = "#1e2530" if (r + c) % 2 == 0 else "#27303d"
+                        self.canvas.create_rectangle(bx1, by1, bx2, by2, fill=tile_color, outline="")
+
+                # Crisp frame around sprite
                 self.canvas.create_rectangle(top_left_x, top_left_y, top_left_x + iw, top_left_y + ih,
-                                             fill="#181f2a", outline="#334155", width=1)
-                
+                                             outline="#38bdf8", width=1)
+
                 resized = self.raw_image.resize((iw, ih), Image.Resampling.NEAREST)
                 self.tk_image = ImageTk.PhotoImage(resized)
                 self.canvas.create_image(self.pan_x, self.pan_y, image=self.tk_image)
         else:
-            self.canvas.create_text(self.pan_x, self.pan_y, text="No Sprite Loaded\nUse 'File -> Load Sprite...'",
-                                    fill="#64748b", font=("Segoe UI", 12), justify="center")
+            # High-Contrast Welcome / Instructions Card in Canvas Center
+            cw = max(self.canvas.winfo_width(), 700)
+            ch = max(self.canvas.winfo_height(), 500)
+            cx = cw / 2.0
+            cy = ch / 2.0
+
+            card_w, card_h = 520, 220
+            x1, y1 = cx - card_w / 2, cy - card_h / 2
+            x2, y2 = cx + card_w / 2, cy + card_h / 2
+
+            # Card drop shadow & background
+            self.canvas.create_rectangle(x1 + 4, y1 + 4, x2 + 4, y2 + 4, fill="#0a0e14", outline="")
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill="#1e242c", outline="#38bdf8", width=2)
+
+            self.canvas.create_text(cx, y1 + 26, text="✦ STARSECTOR SHIP & WEAPON FORGE ✦",
+                                    fill="#38bdf8", font=("Segoe UI", 12, "bold"))
+            self.canvas.create_text(cx, y1 + 48, text="No Sprite Image Currently Loaded",
+                                    fill="#ffffff", font=("Segoe UI", 11, "bold"))
+            self.canvas.create_line(x1 + 20, y1 + 64, x2 - 20, y1 + 64, fill="#374151", width=1)
+
+            self.canvas.create_text(cx - 220, y1 + 88, text="1. Click 'Load Sprite...' in the toolbar (or Ctrl+L) to load a ship PNG.",
+                                    fill="#f8fafc", font=("Segoe UI", 9, "bold"), anchor="w")
+            self.canvas.create_text(cx - 220, y1 + 112, text="2. Press F1 (Dimensions Guide) to view pixel guidelines or create a template.",
+                                    fill="#f8fafc", font=("Segoe UI", 9, "bold"), anchor="w")
+            self.canvas.create_text(cx - 220, y1 + 136, text="3. Open 'File -> Open Project...' (Ctrl+O) to load an existing project.",
+                                    fill="#f8fafc", font=("Segoe UI", 9, "bold"), anchor="w")
+
+            # Sample callout box
+            self.canvas.create_rectangle(x1 + 20, y1 + 160, x2 - 20, y2 - 14, fill="#252e3b", outline="#475569")
+            self.canvas.create_text(cx, y1 + 178, text="★ Quick Test: Open 'File -> Open Project' and select 'samples/carcinus.ssproj'!",
+                                    fill="#facc15", font=("Segoe UI", 9, "bold"))
             return
 
-        # 2. Ship Mode Overlays
+        # 3. Ship Mode Overlays
         if self.mode == "SHIP" and self.ship_project:
             self.draw_ship_elements()
-        # 3. Weapon Mode Overlays
+        # 4. Weapon Mode Overlays
         elif self.mode == "WEAPON" and self.weapon_project:
             self.draw_weapon_elements()
 
@@ -228,18 +298,19 @@ class CanvasEditor(tk.Frame):
 
         # Center point (0, 0)
         cx, cy = self.ss_to_screen(0, 0)
-        self.canvas.create_line(cx - 15, cy, cx + 15, cy, fill="#38bdf8", width=1, dash=(2, 2))
-        self.canvas.create_line(cx, cy - 15, cx, cy + 15, fill="#38bdf8", width=1, dash=(2, 2))
-        self.canvas.create_oval(cx - 3, cy - 3, cx + 3, cy + 3, fill="#38bdf8", outline="")
+        self.canvas.create_line(cx - 20, cy, cx + 20, cy, fill="#38bdf8", width=2)
+        self.canvas.create_line(cx, cy - 20, cx, cy + 20, fill="#38bdf8", width=2)
+        self.canvas.create_oval(cx - 4, cy - 4, cx + 4, cy + 4, fill="#38bdf8", outline="#ffffff", width=1)
+        self.canvas.create_text(cx + 8, cy - 8, text="(0, 0)", fill="#38bdf8", font=("Segoe UI", 8, "bold"))
 
         # Shield Bubble
         scx, scy = self.ss_to_screen(sp.shield_center[0], sp.shield_center[1])
         s_rad = sp.shield_radius * self.zoom
         self.canvas.create_oval(scx - s_rad, scy - s_rad, scx + s_rad, scy + s_rad,
-                                outline="#06b6d4", width=1, dash=(4, 4))
+                                outline="#06b6d4", width=2, dash=(6, 4))
         # Shield drag handle at right edge
-        self.canvas.create_oval(scx + s_rad - 5, scy - 5, scx + s_rad + 5, scy + 5,
-                                fill="#06b6d4", outline="#ffffff", tags="shield_handle")
+        self.canvas.create_oval(scx + s_rad - 6, scy - 6, scx + s_rad + 6, scy + 6,
+                                fill="#06b6d4", outline="#ffffff", width=2, tags="shield_handle")
         self.item_hitboxes["shield_handle"] = ("SHIELD", None)
 
         # Bounds Polygon
@@ -248,17 +319,18 @@ class CanvasEditor(tk.Frame):
             for idx, pt in enumerate(sp.bounds):
                 bx, by = self.ss_to_screen(pt[0], pt[1])
                 pts.extend([bx, by])
-            # Draw line
+            # Draw connecting perimeter line
             pts.extend([pts[0], pts[1]])
-            self.canvas.create_line(pts, fill="#10b981", width=2)
+            self.canvas.create_line(pts, fill="#22c55e", width=2)
 
             # Draw clickable vertex dots
             for idx, pt in enumerate(sp.bounds):
                 bx, by = self.ss_to_screen(pt[0], pt[1])
                 is_sel = (self.selected_item == ("BOUND", idx))
-                fill_c = "#facc15" if is_sel else "#10b981"
+                fill_c = "#facc15" if is_sel else "#ffffff"
+                outline_c = "#ffffff" if is_sel else "#15803d"
                 tag = f"bound_{idx}"
-                self.canvas.create_oval(bx - 4, by - 4, bx + 4, by + 4, fill=fill_c, outline="#ffffff", tags=tag)
+                self.canvas.create_oval(bx - 5, by - 5, bx + 5, by + 5, fill=fill_c, outline=outline_c, width=2, tags=tag)
                 self.item_hitboxes[tag] = ("BOUND", idx)
 
         # Engine Slots
@@ -272,20 +344,13 @@ class CanvasEditor(tk.Frame):
     def draw_engine_slot(self, eng, idx):
         sx, sy = self.ss_to_screen(eng.x, eng.y)
         is_sel = (self.selected_item == ("ENGINE", eng))
-        
-        # Engine angle in screen space:
-        # In Starsector, angle 180 points AFT (-X, downward on screen).
-        # Angle 0 points FORWARD (+X, upward on screen).
-        # Angle 90 points PORT (+Y, leftward on screen).
-        # Angle -90/270 points STARBOARD (-Y, rightward on screen).
-        # Mathematical angle in screen radians:
-        screen_deg = 270.0 - eng.angle  # 180 -> 90 deg (down), 0 -> 270 deg (up)
+
+        screen_deg = 270.0 - eng.angle
         rad = math.radians(screen_deg)
 
-        # Draw flame contrail preview triangle
-        flame_len = eng.length * self.zoom * 0.7
-        flame_w = eng.width * self.zoom * 0.5
-        
+        flame_len = eng.length * self.zoom * 0.75
+        flame_w = eng.width * self.zoom * 0.55
+
         fx = sx + math.cos(rad) * flame_len
         fy = sy + math.sin(rad) * flame_len
         perp = rad + math.pi / 2.0
@@ -294,98 +359,95 @@ class CanvasEditor(tk.Frame):
         p2x = sx - math.cos(perp) * flame_w
         p2y = sy - math.sin(perp) * flame_w
 
+        # Vibrant exhaust plume
+        flame_fill = "#38bdf8" if eng.style == "HIGH_TECH" else "#f97316"
         self.canvas.create_polygon([p1x, p1y, fx, fy, p2x, p2y],
-                                   fill="#38bdf8" if eng.style == "HIGH_TECH" else "#f97316",
-                                   stipple="gray50", outline="")
+                                   fill=flame_fill, stipple="gray50", outline="")
 
-        # Nozzle Bar
         tag = f"engine_{idx}"
         bar_col = "#facc15" if is_sel else "#ef4444"
-        self.canvas.create_line(p1x, p1y, p2x, p2y, fill=bar_col, width=3, tags=tag)
-        self.canvas.create_oval(sx - 4, sy - 4, sx + 4, sy + 4, fill=bar_col, outline="#ffffff", tags=tag)
+        self.canvas.create_line(p1x, p1y, p2x, p2y, fill=bar_col, width=4, tags=tag)
+        self.canvas.create_oval(sx - 5, sy - 5, sx + 5, sy + 5, fill=bar_col, outline="#ffffff", width=2, tags=tag)
         self.item_hitboxes[tag] = ("ENGINE", eng)
 
     def draw_weapon_slot(self, slot, idx):
         sx, sy = self.ss_to_screen(slot.x, slot.y)
         is_sel = (self.selected_item == ("WEAPON", slot))
 
-        # Size radius on canvas
-        rad_map = {"SMALL": 7, "MEDIUM": 13, "LARGE": 20}
-        base_r = rad_map.get(slot.size, 10) * max(0.8, min(2.5, self.zoom * 0.4))
+        rad_map = {"SMALL": 8, "MEDIUM": 14, "LARGE": 22}
+        base_r = rad_map.get(slot.size, 11) * max(0.8, min(2.5, self.zoom * 0.4))
 
         color = WEAPON_COLORS.get(slot.type, "#ffffff")
-        outline_col = "#ffffff" if is_sel else "#1e293b"
+        outline_col = "#ffffff" if is_sel else "#0f172a"
         tag = f"weapon_{idx}"
 
-        # Draw Arc Cone Wedge (if not 360)
+        # Firing Arc Cone
         if slot.arc < 360:
-            cone_len = base_r + 25 * max(0.6, min(1.5, self.zoom * 0.4))
+            cone_len = base_r + 28 * max(0.6, min(1.5, self.zoom * 0.4))
             center_deg = 270.0 - slot.angle
             half_arc = slot.arc / 2.0
-            
-            # Start angle and extent in Tkinter canvas arc coordinates
-            # Tkinter create_arc uses degrees counter-clockwise from 3 o'clock
             tk_start = - (center_deg + half_arc)
             self.canvas.create_arc(sx - cone_len, sy - cone_len, sx + cone_len, sy + cone_len,
                                    start=tk_start, extent=slot.arc,
                                    fill=color, stipple="gray25", outline=color, width=1)
 
-        # Draw Mount Base
+        # Mount Base Shape
         if slot.mount == "HARDPOINT":
-            # Rectangular representation
             self.canvas.create_rectangle(sx - base_r, sy - base_r * 1.3, sx + base_r, sy + base_r * 1.3,
-                                         fill=color, outline=outline_col, width=2 if is_sel else 1, tags=tag)
+                                         fill=color, outline=outline_col, width=3 if is_sel else 2, tags=tag)
         elif slot.mount == "HIDDEN":
             self.canvas.create_oval(sx - base_r, sy - base_r, sx + base_r, sy + base_r,
-                                    outline=color, width=1, dash=(2, 2), tags=tag)
+                                    outline=color, width=2, dash=(3, 3), tags=tag)
         else:  # TURRET
             self.canvas.create_oval(sx - base_r, sy - base_r, sx + base_r, sy + base_r,
-                                    fill=color, outline=outline_col, width=2 if is_sel else 1, tags=tag)
+                                    fill=color, outline=outline_col, width=3 if is_sel else 2, tags=tag)
 
         # Facing Arrow
         screen_deg = 270.0 - slot.angle
         rad = math.radians(screen_deg)
-        arrow_len = base_r + 10
+        arrow_len = base_r + 12
         ax = sx + math.cos(rad) * arrow_len
         ay = sy + math.sin(rad) * arrow_len
         self.canvas.create_line(sx, sy, ax, ay, fill="#ffffff", width=2, arrow="last", tags=tag)
 
-        # Label
-        self.canvas.create_text(sx, sy + base_r + 9, text=slot.id, fill="#e2e8f0", font=("Segoe UI", 7, "bold"))
+        # High-Contrast Label Pill
+        bbox_w = len(slot.id) * 3.8 + 6
+        self.canvas.create_rectangle(sx - bbox_w, sy + base_r + 4, sx + bbox_w, sy + base_r + 18,
+                                     fill="#11161d", outline="#475569", width=1)
+        self.canvas.create_text(sx, sy + base_r + 11, text=slot.id, fill="#ffffff", font=("Segoe UI", 7, "bold"))
         self.item_hitboxes[tag] = ("WEAPON", slot)
 
     def draw_weapon_elements(self):
         wp = self.weapon_project
         offsets = wp.turret_offsets if self.active_weapon_sprite == "TURRET" else wp.hardpoint_offsets
 
-        # Center line
         cx, cy = self.ss_to_screen(0, 0)
-        self.canvas.create_line(cx - 12, cy, cx + 12, cy, fill="#38bdf8", width=1, dash=(2, 2))
-        self.canvas.create_line(cx, cy - 12, cx, cy + 12, fill="#38bdf8", width=1, dash=(2, 2))
+        self.canvas.create_line(cx - 15, cy, cx + 15, cy, fill="#38bdf8", width=2)
+        self.canvas.create_line(cx, cy - 15, cx, cy + 15, fill="#38bdf8", width=2)
 
-        # Barrel offsets
         for idx, pt in enumerate(offsets):
             sx, sy = self.ss_to_screen(pt[0], pt[1])
             is_sel = (self.selected_item == ("OFFSET", idx))
             col = "#facc15" if is_sel else "#ef4444"
             tag = f"offset_{idx}"
-            
-            # Crosshair marker
-            self.canvas.create_line(sx - 8, sy, sx + 8, sy, fill=col, width=2, tags=tag)
-            self.canvas.create_line(sx, sy - 8, sx, sy + 8, fill=col, width=2, tags=tag)
-            self.canvas.create_oval(sx - 4, sy - 4, sx + 4, sy + 4, outline=col, width=2, tags=tag)
-            self.canvas.create_text(sx + 10, sy - 10, text=f"Barrel {idx+1}", fill="#ffffff", font=("Segoe UI", 8, "bold"))
+
+            self.canvas.create_line(sx - 10, sy, sx + 10, sy, fill=col, width=2, tags=tag)
+            self.canvas.create_line(sx, sy - 10, sx, sy + 10, fill=col, width=2, tags=tag)
+            self.canvas.create_oval(sx - 5, sy - 5, sx + 5, sy + 5, outline=col, width=2, tags=tag)
+
+            bbox_w = 34
+            self.canvas.create_rectangle(sx + 10, sy - 18, sx + 10 + bbox_w, sy - 4, fill="#11161d", outline="#475569")
+            self.canvas.create_text(sx + 27, sy - 11, text=f"B-{idx+1}", fill="#ffffff", font=("Segoe UI", 7, "bold"))
             self.item_hitboxes[tag] = ("OFFSET", idx)
 
-    # Mouse Click Selection & Drag Handling
+    # Mouse Handlers
     def on_left_down(self, event):
-        # 1. Check if clicking on an interactive element
         hit = self.find_hit(event.x, event.y)
         if hit:
             self.selected_item = hit
             self.drag_data["x"] = event.x
             self.drag_data["y"] = event.y
-            
+
             if hit[0] == "WEAPON":
                 self.drag_data["orig_ss_x"] = hit[1].x
                 self.drag_data["orig_ss_y"] = hit[1].y
@@ -409,19 +471,19 @@ class CanvasEditor(tk.Frame):
             self.redraw()
             return
 
-        # 2. Clicked empty canvas in tool mode
+        # Empty click in Add tool mode
         if self.tool_mode == "ADD_WEAPON" and self.ship_project:
             ss_x, ss_y = self.screen_to_ss(event.x, event.y)
             num = len(self.ship_project.weapon_slots) + 1
+            default_arc = 10.0 if self.new_slot_mount == "HARDPOINT" else 120.0
             new_slot = WeaponSlot(
                 slot_id=f"WS {num:03d}",
-                x=ss_x, y=ss_y, angle=0.0, arc=120.0,
+                x=ss_x, y=ss_y, angle=0.0, arc=default_arc,
                 size=self.new_slot_size, mount=self.new_slot_mount, wpn_type=self.new_slot_type
             )
             self.ship_project.weapon_slots.append(new_slot)
             self.selected_item = ("WEAPON", new_slot)
-            
-            # Mirror if symmetry active and not on centerline
+
             if self.symmetry_enabled and abs(ss_y) > 4:
                 m_slot = WeaponSlot(
                     slot_id=f"WS {num+1:03d}",
@@ -451,7 +513,6 @@ class CanvasEditor(tk.Frame):
             self.redraw()
 
         else:
-            # Deselect
             self.selected_item = None
             if self.on_select_callback:
                 self.on_select_callback(None)
@@ -494,16 +555,35 @@ class CanvasEditor(tk.Frame):
         self.redraw()
 
     def on_left_up(self, event):
-        pass
+        if self.selected_item:
+            item_type, item_obj = self.selected_item
+            if item_type in ("WEAPON", "ENGINE"):
+                self.drag_data["orig_ss_x"] = item_obj.x
+                self.drag_data["orig_ss_y"] = item_obj.y
+            elif item_type == "BOUND":
+                if self.ship_project and item_obj < len(self.ship_project.bounds):
+                    pt = self.ship_project.bounds[item_obj]
+                    self.drag_data["orig_ss_x"] = pt[0]
+                    self.drag_data["orig_ss_y"] = pt[1]
+            elif item_type == "OFFSET":
+                offsets = self.weapon_project.turret_offsets if self.active_weapon_sprite == "TURRET" else self.weapon_project.hardpoint_offsets
+                if item_obj < len(offsets):
+                    pt = offsets[item_obj]
+                    self.drag_data["orig_ss_x"] = pt[0]
+                    self.drag_data["orig_ss_y"] = pt[1]
+            elif item_type == "SHIELD":
+                self.drag_data["orig_rad"] = self.ship_project.shield_radius
+
+            if self.on_change_callback:
+                self.on_change_callback()
+            self.redraw()
 
     def find_hit(self, sx, sy):
-        # Scan hitboxes within 12 pixel radius
         for tag, item in self.item_hitboxes.items():
             bbox = self.canvas.bbox(tag)
             if bbox:
                 x1, y1, x2, y2 = bbox
-                # Inflate hit area slightly for easy clicking
-                if (x1 - 6 <= sx <= x2 + 6) and (y1 - 6 <= sy <= y2 + 6):
+                if (x1 - 8 <= sx <= x2 + 8) and (y1 - 8 <= sy <= y2 + 8):
                     return item
         return None
 
